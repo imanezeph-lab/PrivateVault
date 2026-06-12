@@ -110,7 +110,7 @@ struct BackupService {
         return container.entries
     }
 
-    static func restoreEntries(_ entries: [BackupEntry], into viewModel: VaultViewModel) {
+    @MainActor static func restoreEntries(_ entries: [BackupEntry], into viewModel: VaultViewModel) {
         for entry in entries {
             guard let fileData = Data(base64Encoded: entry.data) else { continue }
             let ext = (entry.fileName as NSString).pathExtension
