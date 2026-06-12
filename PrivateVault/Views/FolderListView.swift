@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct FolderListView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
@@ -10,6 +11,26 @@ struct FolderListView: View {
     @State private var showingDeleteAlert = false
     @State private var folderToRename: Folder?
     @State private var renameText = ""
+
+    @State private var showingBackup = false
+    @State private var backupMode: BackupMode = .export
+    @State private var passphrase = ""
+    @State private var confirmPassphrase = ""
+    @State private var backupResult: BackupResult?
+    @State private var showFileExporter = false
+    @State private var showFileImporter = false
+    @State private var exportedData: Data?
+    @State private var importedData: Data?
+    @State private var isProcessing = false
+
+    enum BackupMode {
+        case export, `import`
+    }
+
+    enum BackupResult {
+        case success(String)
+        case failure(String)
+    }
 
     var body: some View {
         List {
@@ -55,6 +76,32 @@ struct FolderListView: View {
                     }
                 }
             }
+
+            Section {
+                Button {
+                    backupMode = .export
+                    passphrase = ""
+                    confirmPassphrase = ""
+                    backupResult = nil
+                    showingBackup = true
+                } label: {
+                    Label("Backup All Data", systemImage: "square.and.arrow.up")
+                }
+
+                Button {
+                    backupMode = .import
+                    passphrase = ""
+                    confirmPassphrase = ""
+                    backupResult = nil
+                    showingBackup = true
+                } label: {
+                    Label("Restore from Backup", systemImage: "square.and.arrow.down")
+                }
+            } header: {
+                Text("Backup")
+            } footer: {
+                Text("Backups are AES-256 encrypted. Save the .vault file anywhere — you'll need your passphrase to restore.")
+            }
         }
         .navigationTitle("Private Vault")
         .onAppear { viewModel.selectedFolderID = nil }
@@ -76,30 +123,20 @@ struct FolderListView: View {
         }
         .alert("New Folder", isPresented: $showingNewFolder) {
             TextField("Folder name", text: $newFolderName)
-            Button("Cancel", role: .cancel) {
-                newFolderName = ""
-            }
+            Button("Cancel", role: .cancel) { newFolderName = "" }
             Button("Create") {
                 let name = newFolderName.trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty {
-                    viewModel.createFolder(name: name)
-                }
+                if !name.isEmpty { viewModel.createFolder(name: name) }
                 newFolderName = ""
             }
-        } message: {
-            Text("Enter a name for the new folder.")
-        }
+        } message: { Text("Enter a name for the new folder.") }
         .alert("Delete Folder", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { folderToDelete = nil }
             Button("Delete", role: .destructive) {
-                if let folder = folderToDelete {
-                    viewModel.deleteFolder(folder)
-                }
+                if let folder = folderToDelete { viewModel.deleteFolder(folder) }
                 folderToDelete = nil
             }
-        } message: {
-            Text("Items in this folder will be moved out but NOT deleted.")
-        }
+        } message: { Text("Items in this folder will be moved out but NOT deleted.") }
         .alert("Rename Folder", isPresented: .init(
             get: { folderToRename != nil },
             set: { if !$0 { folderToRename = nil } }
@@ -109,12 +146,166 @@ struct FolderListView: View {
             Button("Save") {
                 if let folder = folderToRename {
                     let name = renameText.trimmingCharacters(in: .whitespaces)
-                    if !name.isEmpty {
-                        viewModel.renameFolder(folder, to: name)
-                    }
+                    if !name.isEmpty { viewModel.renameFolder(folder, to: name) }
                 }
                 folderToRename = nil
             }
         }
+        .sheet(isPresented: $showingBackup) {
+            backupSheet
+        }
+        .fileExporter(
+            isPresented: $showFileExporter,
+            document: exportedData.map { BackupDocument(data: $0) },
+            contentType: .vaultBackup,
+            defaultFilename: "PrivateVault-\(formattedDate()).vault"
+        ) { result in
+            switch result {
+            case .success: backupResult = .success("Backup saved!")
+            case .failure(let error): backupResult = .failure(error.localizedDescription)
+            }
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.vaultBackup],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first, url.startAccessingSecurityScopedResource() else {
+                    backupResult = .failure("Could not access file")
+                    return
+                }
+                defer { url.stopAccessingSecurityScopedResource() }
+                importedData = try? Data(contentsOf: url)
+                restoreBackup()
+            case .failure(let error):
+                backupResult = .failure(error.localizedDescription)
+            }
+        }
     }
+
+    private var backupSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField("Passphrase", text: $passphrase)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    if backupMode == .export {
+                        SecureField("Confirm passphrase", text: $confirmPassphrase)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
+                } header: {
+                    Text(backupMode == .export ? "Set a passphrase" : "Enter passphrase")
+                } footer: {
+                    if backupMode == .export {
+                        Text("You'll need this passphrase to restore the backup. Don't forget it!")
+                    }
+                }
+
+                if let result = backupResult {
+                    Section {
+                        switch result {
+                        case .success(let msg):
+                            Label(msg, systemImage: "checkmark.circle")
+                                .foregroundStyle(.green)
+                        case .failure(let msg):
+                            Label(msg, systemImage: "xmark.circle")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                if isProcessing {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                }
+            }
+            .navigationTitle(backupMode == .export ? "Export Backup" : "Restore Backup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { showingBackup = false }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(backupMode == .export ? "Export" : "Restore") {
+                        Task { await handleBackupAction() }
+                    }
+                    .disabled(passphrase.isEmpty || (backupMode == .export && passphrase != confirmPassphrase) || isProcessing)
+                }
+            }
+        }
+    }
+
+    private func handleBackupAction() async {
+        isProcessing = true
+        defer { isProcessing = false }
+
+        switch backupMode {
+        case .export:
+            do {
+                let jsonData = try BackupService.createBackup(items: viewModel.items)
+                let encryptedData = try BackupService.encryptBackup(jsonData, passphrase: passphrase)
+                exportedData = encryptedData
+                showingBackup = false
+                showFileExporter = true
+            } catch {
+                backupResult = .failure(error.localizedDescription)
+            }
+
+        case .import:
+            showFileImporter = true
+            showingBackup = false
+        }
+    }
+
+    private func restoreBackup() {
+        guard let data = importedData else {
+            backupResult = .failure("No data in file")
+            return
+        }
+
+        do {
+            let decrypted = try BackupService.decryptBackup(data, passphrase: passphrase)
+            let entries = try BackupService.extractEntries(from: decrypted)
+            BackupService.restoreEntries(entries, into: viewModel)
+            backupResult = .success("Restored \(entries.count) item(s)!")
+        } catch {
+            backupResult = .failure(error.localizedDescription)
+        }
+    }
+
+    private func formattedDate() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: Date())
+    }
+}
+
+struct BackupDocument: FileDocument {
+    let data: Data
+
+    static var readableContentTypes: [UTType] { [.vaultBackup] }
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        self.data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+
+extension UTType {
+    static let vaultBackup = UTType(filenameExtension: "vault") ?? .data
 }
