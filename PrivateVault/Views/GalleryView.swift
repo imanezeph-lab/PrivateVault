@@ -3,12 +3,19 @@ import SwiftUI
 struct GalleryView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
     @Binding var selectedItem: MediaItem?
+    @Binding var showingImport: Bool
+    @State private var itemToMove: MediaItem?
+    @State private var showMoveSheet = false
 
     private let columns = [GridItem(.adaptive(minimum: 100), spacing: 2)]
 
+    private var displayItems: [MediaItem] {
+        viewModel.filteredItems
+    }
+
     var body: some View {
         Group {
-            if viewModel.items.isEmpty {
+            if displayItems.isEmpty {
                 ContentUnavailableView(
                     "No Items",
                     systemImage: "photo.on.rectangle",
@@ -20,22 +27,40 @@ struct GalleryView: View {
                 listContent
             }
         }
+        .navigationTitle(viewModel.currentFolderName)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    withAnimation { viewModel.isGrid.toggle() }
+                } label: {
+                    Image(systemName: viewModel.isGrid
+                          ? "list.bullet"
+                          : "square.grid.2x2")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingImport = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showMoveSheet) {
+            moveFolderSheet
+        }
     }
 
     private var gridContent: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(viewModel.items) { item in
+                ForEach(displayItems) { item in
                     thumbnail(for: item)
                         .aspectRatio(1, contentMode: .fill)
                         .clipped()
                         .contentShape(Rectangle())
                         .onTapGesture { selectedItem = item }
-                        .contextMenu {
-                            Button("Delete", role: .destructive) {
-                                viewModel.deleteItem(item)
-                            }
-                        }
+                        .contextMenu { itemContextMenu(for: item) }
                 }
             }
         }
@@ -43,7 +68,7 @@ struct GalleryView: View {
 
     private var listContent: some View {
         List {
-            ForEach(viewModel.items) { item in
+            ForEach(displayItems) { item in
                 HStack(spacing: 12) {
                     thumbnail(for: item)
                         .frame(width: 52, height: 52)
@@ -68,10 +93,68 @@ struct GalleryView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { selectedItem = item }
+                .contextMenu { itemContextMenu(for: item) }
             }
             .onDelete { indexSet in
                 for index in indexSet {
-                    viewModel.deleteItem(viewModel.items[index])
+                    viewModel.deleteItem(displayItems[index])
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func itemContextMenu(for item: MediaItem) -> some View {
+        Button {
+            selectedItem = item
+        } label: {
+            Label("View", systemImage: "eye")
+        }
+
+        if !viewModel.folders.isEmpty {
+            Button {
+                itemToMove = item
+                showMoveSheet = true
+            } label: {
+                Label("Move to Folder", systemImage: "folder")
+            }
+        }
+
+        Button(role: .destructive) {
+            viewModel.deleteItem(item)
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
+    }
+
+    @ViewBuilder
+    private var moveFolderSheet: some View {
+        if let item = itemToMove {
+            NavigationStack {
+                List {
+                    Button {
+                        viewModel.moveItem(item, to: nil)
+                        showMoveSheet = false
+                    } label: {
+                        Label("No Folder (All Items)", systemImage: "tray")
+                    }
+
+                    ForEach(viewModel.folders) { folder in
+                        Button {
+                            viewModel.moveItem(item, to: folder.id)
+                            showMoveSheet = false
+                        } label: {
+                            Label(folder.name, systemImage: folder.icon)
+                                .badge(viewModel.folderItemCount(folder))
+                        }
+                    }
+                }
+                .navigationTitle("Move to Folder")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Cancel") { showMoveSheet = false }
+                    }
                 }
             }
         }

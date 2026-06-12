@@ -6,6 +6,7 @@ struct DetailView: View {
     let item: MediaItem
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: VaultViewModel
+    @State private var showMoveSheet = false
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,14 @@ struct DetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
+                        if !viewModel.folders.isEmpty {
+                            Button {
+                                showMoveSheet = true
+                            } label: {
+                                Image(systemName: "folder")
+                            }
+                        }
+
                         ShareLink(item: item.fileURL) {
                             Image(systemName: "square.and.arrow.up")
                         }
@@ -37,6 +46,38 @@ struct DetailView: View {
 
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showMoveSheet) {
+                moveFolderSheet
+            }
+        }
+    }
+
+    private var moveFolderSheet: some View {
+        NavigationStack {
+            List {
+                Button {
+                    viewModel.moveItem(item, to: nil)
+                    showMoveSheet = false
+                } label: {
+                    Label("No Folder (All Items)", systemImage: "tray")
+                }
+
+                ForEach(viewModel.folders) { folder in
+                    Button {
+                        viewModel.moveItem(item, to: folder.id)
+                        showMoveSheet = false
+                    } label: {
+                        Label(folder.name, systemImage: folder.icon)
+                    }
+                }
+            }
+            .navigationTitle("Move to Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { showMoveSheet = false }
                 }
             }
         }

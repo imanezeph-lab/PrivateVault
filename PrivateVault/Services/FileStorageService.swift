@@ -5,12 +5,15 @@ final class FileStorageService {
 
     let directory: URL
     private let indexURL: URL
+    private let foldersIndexURL: URL
     private let indexFileName = "vault_index.json"
+    private let foldersFileName = "folders.json"
 
     private init() {
         let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         directory = paths[0].appendingPathComponent("PrivateVault", isDirectory: true)
         indexURL = directory.appendingPathComponent(indexFileName)
+        foldersIndexURL = directory.appendingPathComponent(foldersFileName)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -24,6 +27,18 @@ final class FileStorageService {
     func saveIndex(_ items: [MediaItem]) {
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: indexURL, options: .atomic)
+    }
+
+    func loadFolders() -> [Folder] {
+        guard let data = try? Data(contentsOf: foldersIndexURL),
+              let folders = try? JSONDecoder().decode([Folder].self, from: data)
+        else { return [] }
+        return folders
+    }
+
+    func saveFolders(_ folders: [Folder]) {
+        guard let data = try? JSONEncoder().encode(folders) else { return }
+        try? data.write(to: foldersIndexURL, options: .atomic)
     }
 
     func copyFile(from sourceURL: URL, type: MediaType) -> MediaItem? {

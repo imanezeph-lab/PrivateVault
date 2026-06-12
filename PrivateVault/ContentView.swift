@@ -7,27 +7,7 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            GalleryView(selectedItem: $selectedItem)
-                .navigationTitle("Private Vault")
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            withAnimation { viewModel.isGrid.toggle() }
-                        } label: {
-                            Image(systemName: viewModel.isGrid
-                                  ? "list.bullet"
-                                  : "square.grid.2x2")
-                        }
-                    }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showingImport = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                    }
-                }
+            FolderListView(selectedItem: $selectedItem, showingImport: $showingImport)
                 .fullScreenCover(item: $selectedItem) { item in
                     DetailView(item: item)
                         .environmentObject(viewModel)
