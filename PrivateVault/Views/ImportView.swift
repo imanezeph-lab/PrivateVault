@@ -48,7 +48,7 @@ struct ImportView: View {
             }
             .fileImporter(
                 isPresented: $showDocumentPicker,
-                allowedContentTypes: [.image, .video, .gif, .pdf, .text, .data, .archive, .spreadsheet, .presentation],
+                allowedContentTypes: [.image, .video, .gif, .audio, .pdf, .text, .data, .archive, .spreadsheet, .presentation],
                 allowsMultipleSelection: true
             ) { result in
                 switch result {

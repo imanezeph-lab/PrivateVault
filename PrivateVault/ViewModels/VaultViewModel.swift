@@ -62,6 +62,8 @@ final class VaultViewModel: ObservableObject {
                 mediaType = .video
             } else if ["gif"].contains(ext) {
                 mediaType = .gif
+            } else if ["mp3", "wav", "aac", "flac", "ogg", "wma", "m4a", "alac", "aiff"].contains(ext) {
+                mediaType = .file
             } else {
                 mediaType = .file
             }
