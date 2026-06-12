@@ -27,9 +27,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
+            PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
 
       - name: Package unsigned IPA
+        if: success()
         run: |
           mkdir -p Payload
           cp -R "build/PrivateVault.xcarchive/Products/Applications/PrivateVault.app" Payload/
@@ -37,6 +45,7 @@ jobs:
           rm -rf Payload
 
       - name: Upload IPA
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: PrivateVault-IPA

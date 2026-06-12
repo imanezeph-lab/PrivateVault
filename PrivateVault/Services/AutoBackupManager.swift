@@ -73,9 +73,9 @@ final class AutoBackupManager: ObservableObject {
         guard isEnabled else { return }
 
         backupTask?.cancel()
-        backupTask = Task { [weak viewModel] in
+        backupTask = Task { [weak self, weak viewModel] in
             try? await Task.sleep(nanoseconds: 5_000_000_000)
-            guard let viewModel, !Task.isCancelled else { return }
+            guard let self, let viewModel, !Task.isCancelled else { return }
 
             do {
                 let allItems = viewModel.items
