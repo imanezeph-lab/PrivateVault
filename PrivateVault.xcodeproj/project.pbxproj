@@ -24,7 +24,6 @@
 		1000000000000000000000000000000000000015 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000017 /* TrashView.swift */; };
 		1000000000000000000000000000000000000016 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000018 /* ThemeManager.swift */; };
 		1000000000000000000000000000000000000017 /* AutoBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000019 /* AutoBackupManager.swift */; };
-		1000000000000000000000000000000000000018 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000020 /* Security.framework */; };
 		3000000000000000000000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000012 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -48,7 +47,6 @@
 		2000000000000000000000000000000000000017 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000018 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000019 /* AutoBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBackupManager.swift; sourceTree = "<group>"; };
-		2000000000000000000000000000000000000020 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		00000000000000000000000000000000000000A0 /* PrivateVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivateVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -57,7 +55,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1000000000000000000000000000000000000018 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import Security
 
 @MainActor
 final class AutoBackupManager: ObservableObject {
@@ -16,7 +15,7 @@ final class AutoBackupManager: ObservableObject {
     private let storage = FileStorageService.shared
     private let backupDirName = "VaultBackups"
     private let maxLocalBackups = 20
-    private let passphraseKey = "com.privatevault.autobackup.passphrase"
+    private let passphraseKey = "auto_backup_passphrase"
     private let bookmarkKey = "auto_backup_external_bookmark"
     private let lastBackupKey = "auto_backup_last_date"
 
@@ -35,11 +34,11 @@ final class AutoBackupManager: ObservableObject {
     }
 
     private func loadOrCreatePassphrase() {
-        if let stored = KeychainHelper.load(key: passphraseKey) {
+        if let stored = UserDefaults.standard.string(forKey: passphraseKey) {
             passphrase = stored
         } else {
             passphrase = generatePassphrase()
-            KeychainHelper.save(key: passphraseKey, value: passphrase)
+            UserDefaults.standard.set(passphrase, forKey: passphraseKey)
         }
     }
 
@@ -145,42 +144,5 @@ final class AutoBackupManager: ObservableObject {
     private func generatePassphrase() -> String {
         let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
         return String((0..<32).map { _ in chars.randomElement()! })
-    }
-}
-
-private struct KeychainHelper {
-    static func save(key: String, value: String) {
-        guard let data = value.data(using: .utf8) else { return }
-        delete(key: key)
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrAccount: key,
-            kSecValueData: data,
-            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    static func load(key: String) -> String? {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrAccount: key,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              let value = String(data: data, encoding: .utf8)
-        else { return nil }
-        return value
-    }
-
-    static func delete(key: String) {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrAccount: key,
-        ]
-        SecItemDelete(query as CFDictionary)
     }
 }
