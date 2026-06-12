@@ -1,0 +1,18 @@
+# Xcode
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.xcarchive
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local

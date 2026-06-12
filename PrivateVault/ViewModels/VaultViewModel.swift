@@ -7,15 +7,40 @@ final class VaultViewModel: ObservableObject {
     @Published var folders: [Folder] = []
     @Published var isGrid = true
     @Published var selectedFolderID: UUID?
+    @Published var searchText = ""
+    @Published var showFavoritesOnly = false
 
     private let storage = FileStorageService.shared
+    private let autoBackup = AutoBackupManager.shared
+
+    private func persistAndBackup() {
+        storage.saveIndex(items)
+        storage.saveFolders(folders)
+        autoBackup.triggerBackup(viewModel: self)
+    }
 
     var filteredItems: [MediaItem] {
+        var result = items.filter { !$0.isDeleted }
+
         if let folderID = selectedFolderID {
-            items.filter { $0.folderID == folderID }
-        } else {
-            items
+            result = result.filter { $0.folderID == folderID }
         }
+
+        if showFavoritesOnly {
+            result = result.filter { $0.isFavorite }
+        }
+
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.fileName.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        return result.sorted { $0.dateAdded > $1.dateAdded }
+    }
+
+    var trashedItems: [MediaItem] {
+        items.filter { $0.isDeleted }.sorted { ($0.deletedDate ?? $0.dateAdded) > ($1.deletedDate ?? $1.dateAdded) }
     }
 
     var currentFolderName: String {
@@ -30,7 +55,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func loadAll() {
-        items = storage.loadIndex().sorted { $0.dateAdded > $1.dateAdded }
+        items = storage.loadIndex()
         folders = storage.loadFolders()
     }
 
@@ -40,26 +65,70 @@ final class VaultViewModel: ObservableObject {
         withAnimation {
             items.insert(item, at: 0)
         }
-        storage.saveIndex(items)
+        persistAndBackup()
     }
 
-    func deleteItem(_ item: MediaItem) {
+    func toggleFavorite(_ item: MediaItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        var updated = items[index]
+        updated.isFavorite.toggle()
+        withAnimation {
+            items[index] = updated
+        }
+        persistAndBackup()
+    }
+
+    func softDeleteItem(_ item: MediaItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        var updated = items[index]
+        updated.isDeleted = true
+        updated.deletedDate = Date()
+        withAnimation {
+            items[index] = updated
+        }
+        persistAndBackup()
+    }
+
+    func restoreItem(_ item: MediaItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        var updated = items[index]
+        updated.isDeleted = false
+        updated.deletedDate = nil
+        withAnimation {
+            items[index] = updated
+        }
+        persistAndBackup()
+    }
+
+    func permanentlyDeleteItem(_ item: MediaItem) {
         withAnimation {
             items.removeAll { $0.id == item.id }
         }
         storage.deleteFile(item)
-        storage.saveIndex(items)
+        persistAndBackup()
+    }
+
+    func emptyTrash() {
+        let trashed = items.filter { $0.isDeleted }
+        for item in trashed {
+            storage.deleteFile(item)
+        }
+        withAnimation {
+            items.removeAll { $0.isDeleted }
+        }
+        persistAndBackup()
     }
 
     func moveItem(_ item: MediaItem, to folderID: UUID?) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
-        items[index].folderID = folderID
-        storage.saveIndex(items)
-        objectWillChange.send()
+        var updated = items[index]
+        updated.folderID = folderID
+        items[index] = updated
+        persistAndBackup()
     }
 
     func itemsWithoutFolder() -> [MediaItem] {
-        items.filter { $0.folderID == nil }
+        items.filter { $0.folderID == nil && !$0.isDeleted }
     }
 
     // MARK: - Folders
@@ -69,31 +138,40 @@ final class VaultViewModel: ObservableObject {
         withAnimation {
             folders.append(folder)
         }
-        storage.saveFolders(folders)
+        persistAndBackup()
     }
 
     func deleteFolder(_ folder: Folder) {
         for i in items.indices where items[i].folderID == folder.id {
-            items[i].folderID = nil
+            var updated = items[i]
+            updated.folderID = nil
+            items[i] = updated
         }
         withAnimation {
             folders.removeAll { $0.id == folder.id }
         }
-        storage.saveFolders(folders)
-        storage.saveIndex(items)
         if selectedFolderID == folder.id {
             selectedFolderID = nil
         }
+        persistAndBackup()
     }
 
     func renameFolder(_ folder: Folder, to name: String) {
         guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return }
         folders[index].name = name
-        storage.saveFolders(folders)
+        persistAndBackup()
     }
 
     func folderItemCount(_ folder: Folder) -> Int {
-        items.filter { $0.folderID == folder.id }.count
+        items.filter { $0.folderID == folder.id && !$0.isDeleted }.count
+    }
+
+    func activeItemCount() -> Int {
+        items.filter { !$0.isDeleted }.count
+    }
+
+    func favoriteCount() -> Int {
+        items.filter { $0.isFavorite && !$0.isDeleted }.count
     }
 
     // MARK: - Import

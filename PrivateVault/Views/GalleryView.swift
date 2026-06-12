@@ -6,6 +6,8 @@ struct GalleryView: View {
     @Binding var showingImport: Bool
     @State private var itemToMove: MediaItem?
     @State private var showMoveSheet = false
+    @State private var showDeleteConfirmation = false
+    @State private var itemToDelete: MediaItem?
 
     private let columns = [GridItem(.adaptive(minimum: 100), spacing: 2)]
 
@@ -15,12 +17,14 @@ struct GalleryView: View {
 
     var body: some View {
         Group {
-            if displayItems.isEmpty {
+            if viewModel.activeItemCount() == 0 {
                 ContentUnavailableView(
                     "No Items",
                     systemImage: "photo.on.rectangle",
                     description: Text("Tap + to import media or files")
                 )
+            } else if displayItems.isEmpty {
+                ContentUnavailableView.search(text: viewModel.searchText)
             } else if viewModel.isGrid {
                 gridContent
             } else {
@@ -28,14 +32,27 @@ struct GalleryView: View {
             }
         }
         .navigationTitle(viewModel.currentFolderName)
+        .searchable(text: $viewModel.searchText, prompt: "Search files...")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    withAnimation { viewModel.isGrid.toggle() }
-                } label: {
-                    Image(systemName: viewModel.isGrid
-                          ? "list.bullet"
-                          : "square.grid.2x2")
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation { viewModel.isGrid.toggle() }
+                    } label: {
+                        Image(systemName: viewModel.isGrid
+                              ? "list.bullet"
+                              : "square.grid.2x2")
+                    }
+                    if viewModel.activeItemCount() > 0 {
+                        Button {
+                            withAnimation { viewModel.showFavoritesOnly.toggle() }
+                        } label: {
+                            Image(systemName: viewModel.showFavoritesOnly
+                                  ? "star.fill"
+                                  : "star")
+                                .foregroundStyle(viewModel.showFavoritesOnly ? .yellow : .secondary)
+                        }
+                    }
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -49,6 +66,17 @@ struct GalleryView: View {
         .sheet(isPresented: $showMoveSheet) {
             moveFolderSheet
         }
+        .alert("Delete Item", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { itemToDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let item = itemToDelete {
+                    viewModel.softDeleteItem(item)
+                }
+                itemToDelete = nil
+            }
+        } message: {
+            Text("This item will be moved to Recently Deleted.")
+        }
     }
 
     private var gridContent: some View {
@@ -59,6 +87,14 @@ struct GalleryView: View {
                         .aspectRatio(1, contentMode: .fill)
                         .clipped()
                         .contentShape(Rectangle())
+                        .overlay(alignment: .topTrailing) {
+                            if item.isFavorite {
+                                Image(systemName: "star.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.yellow)
+                                    .padding(4)
+                            }
+                        }
                         .onTapGesture { selectedItem = item }
                         .contextMenu { itemContextMenu(for: item) }
                 }
@@ -75,9 +111,16 @@ struct GalleryView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.fileName)
-                            .lineLimit(1)
-                            .font(.subheadline)
+                        HStack(spacing: 4) {
+                            Text(item.fileName)
+                                .lineLimit(1)
+                                .font(.subheadline)
+                            if item.isFavorite {
+                                Image(systemName: "star.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.yellow)
+                            }
+                        }
                         Text(item.dateAdded.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -94,10 +137,19 @@ struct GalleryView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { selectedItem = item }
                 .contextMenu { itemContextMenu(for: item) }
-            }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    viewModel.deleteItem(displayItems[index])
+                .swipeActions(edge: .trailing) {
+                    Button("Delete", role: .destructive) {
+                        itemToDelete = item
+                        showDeleteConfirmation = true
+                    }
+                }
+                .swipeActions(edge: .leading) {
+                    Button {
+                        viewModel.toggleFavorite(item)
+                    } label: {
+                        Image(systemName: item.isFavorite ? "star.slash" : "star")
+                    }
+                    .tint(.yellow)
                 }
             }
         }
@@ -111,6 +163,15 @@ struct GalleryView: View {
             Label("View", systemImage: "eye")
         }
 
+        Button {
+            viewModel.toggleFavorite(item)
+        } label: {
+            Label(
+                item.isFavorite ? "Unfavorite" : "Favorite",
+                systemImage: item.isFavorite ? "star.slash" : "star"
+            )
+        }
+
         if !viewModel.folders.isEmpty {
             Button {
                 itemToMove = item
@@ -121,7 +182,8 @@ struct GalleryView: View {
         }
 
         Button(role: .destructive) {
-            viewModel.deleteItem(item)
+            itemToDelete = item
+            showDeleteConfirmation = true
         } label: {
             Label("Delete", systemImage: "trash")
         }

@@ -73,4 +73,8 @@ final class FileStorageService {
     func deleteFile(_ item: MediaItem) {
         try? FileManager.default.removeItem(at: item.fileURL)
     }
+
+    func fileExists(_ item: MediaItem) -> Bool {
+        FileManager.default.fileExists(atPath: item.fileURL.path)
+    }
 }

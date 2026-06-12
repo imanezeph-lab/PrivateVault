@@ -7,6 +7,7 @@ struct DetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: VaultViewModel
     @State private var showMoveSheet = false
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +25,13 @@ struct DetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
+                        Button {
+                            viewModel.toggleFavorite(item)
+                        } label: {
+                            Image(systemName: item.isFavorite ? "star.fill" : "star")
+                                .foregroundStyle(item.isFavorite ? .yellow : .primary)
+                        }
+
                         if !viewModel.folders.isEmpty {
                             Button {
                                 showMoveSheet = true
@@ -37,8 +45,7 @@ struct DetailView: View {
                         }
 
                         Button("Delete", role: .destructive) {
-                            viewModel.deleteItem(item)
-                            dismiss()
+                            showDeleteConfirmation = true
                         }
                         .foregroundStyle(.red)
                     }
@@ -50,6 +57,15 @@ struct DetailView: View {
             }
             .sheet(isPresented: $showMoveSheet) {
                 moveFolderSheet
+            }
+            .alert("Delete Item", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    viewModel.softDeleteItem(item)
+                    dismiss()
+                }
+            } message: {
+                Text("This item will be moved to Recently Deleted.")
             }
         }
     }

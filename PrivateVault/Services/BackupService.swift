@@ -7,7 +7,35 @@ struct BackupEntry: Codable {
     let dateAdded: Date
     let fileSize: Int64
     let folderID: String?
+    let isFavorite: Bool
+    let isDeleted: Bool
+    let deletedDate: String?
     let data: String
+
+    init(fileName: String, type: MediaType, dateAdded: Date, fileSize: Int64, folderID: String?, isFavorite: Bool = false, isDeleted: Bool = false, deletedDate: String? = nil, data: String) {
+        self.fileName = fileName
+        self.type = type
+        self.dateAdded = dateAdded
+        self.fileSize = fileSize
+        self.folderID = folderID
+        self.isFavorite = isFavorite
+        self.isDeleted = isDeleted
+        self.deletedDate = deletedDate
+        self.data = data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fileName = try container.decode(String.self, forKey: .fileName)
+        type = try container.decode(MediaType.self, forKey: .type)
+        dateAdded = try container.decode(Date.self, forKey: .dateAdded)
+        fileSize = try container.decode(Int64.self, forKey: .fileSize)
+        folderID = try container.decodeIfPresent(String.self, forKey: .folderID)
+        isFavorite = try container.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        isDeleted = try container.decodeIfPresent(Bool.self, forKey: .isDeleted) ?? false
+        deletedDate = try container.decodeIfPresent(String.self, forKey: .deletedDate)
+        data = try container.decode(String.self, forKey: .data)
+    }
 }
 
 private struct BackupContainer: Codable {
@@ -49,12 +77,15 @@ struct BackupService {
                 dateAdded: item.dateAdded,
                 fileSize: item.fileSize,
                 folderID: item.folderID?.uuidString,
+                isFavorite: item.isFavorite,
+                isDeleted: item.isDeleted,
+                deletedDate: item.deletedDate?.ISO8601Format(),
                 data: fileData.base64EncodedString()
             )
             entries.append(entry)
         }
 
-        let container = BackupContainer(version: 1, entries: entries)
+        let container = BackupContainer(version: 2, entries: entries)
         let jsonData = try JSONEncoder().encode(container)
         return jsonData
     }
@@ -88,6 +119,11 @@ struct BackupService {
             if let folderID = entry.folderID, let uuid = UUID(uuidString: folderID) {
                 item?.folderID = uuid
             }
+            item?.isFavorite = entry.isFavorite
+            item?.isDeleted = entry.isDeleted
+            if let ds = entry.deletedDate, let d = try? Date.parseISO8601(ds) {
+                item?.deletedDate = d
+            }
             if let item {
                 viewModel.addItem(item)
             }
@@ -98,5 +134,16 @@ struct BackupService {
         let data = Data(passphrase.utf8)
         let hash = SHA256.hash(data: data)
         return SymmetricKey(data: hash)
+    }
+}
+
+private extension Date {
+    static func parseISO8601(_ string: String) throws -> Date {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fmt.date(from: string) { return date }
+        fmt.formatOptions = [.withInternetDateTime]
+        if let date = fmt.date(from: string) { return date }
+        throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Invalid date"))
     }
 }

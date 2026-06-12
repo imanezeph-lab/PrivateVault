@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 struct FolderListView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
+    @ObservedObject private var autoBackup = AutoBackupManager.shared
     @Binding var selectedItem: MediaItem?
     @Binding var showingImport: Bool
     @State private var showingNewFolder = false
@@ -23,6 +25,10 @@ struct FolderListView: View {
     @State private var importedData: Data?
     @State private var isProcessing = false
 
+    @State private var showingThemePicker = false
+    @State private var showExternalFolderPicker = false
+    @State private var showPassphrase = false
+
     enum BackupMode {
         case export, `import`
     }
@@ -41,7 +47,7 @@ struct FolderListView: View {
                         .onAppear { viewModel.selectedFolderID = nil }
                 } label: {
                     Label("All Items", systemImage: "tray.full")
-                        .badge(viewModel.items.count)
+                        .badge(viewModel.activeItemCount())
                 }
             }
 
@@ -77,6 +83,28 @@ struct FolderListView: View {
                 }
             }
 
+            Section("Quick Links") {
+                NavigationLink {
+                    GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
+                        .environmentObject(viewModel)
+                        .onAppear {
+                            viewModel.selectedFolderID = nil
+                            viewModel.showFavoritesOnly = true
+                        }
+                } label: {
+                    Label("Favorites", systemImage: "star")
+                        .badge(viewModel.favoriteCount())
+                }
+
+                NavigationLink {
+                    TrashView()
+                        .environmentObject(viewModel)
+                } label: {
+                    Label("Recently Deleted", systemImage: "trash")
+                        .badge(viewModel.trashedItems.count)
+                }
+            }
+
             Section {
                 Button {
                     backupMode = .export
@@ -102,9 +130,96 @@ struct FolderListView: View {
             } footer: {
                 Text("Backups are AES-256 encrypted. Save the .vault file anywhere — you'll need your passphrase to restore.")
             }
+
+            Section {
+                Toggle(isOn: $autoBackup.isEnabled) {
+                    Label("Auto Backup", systemImage: "clock.arrow.circlepath")
+                }
+
+                if autoBackup.isEnabled {
+                    if let date = autoBackup.lastBackupDate {
+                        HStack {
+                            Label("Last Backup", systemImage: "checkmark.circle")
+                            Spacer()
+                            Text(date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if autoBackup.hasExternalLocation {
+                        HStack {
+                            Label("External Location", systemImage: "externaldrive")
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                    }
+
+                    Button {
+                        showExternalFolderPicker = true
+                    } label: {
+                        Label(autoBackup.hasExternalLocation ? "Change Location" : "Set External Location",
+                              systemImage: "folder.badge.plus")
+                    }
+
+                    if autoBackup.hasExternalLocation {
+                        Button(role: .destructive) {
+                            autoBackup.clearExternalLocation()
+                        } label: {
+                            Label("Remove Location", systemImage: "xmark.circle")
+                                .foregroundStyle(.red)
+                        }
+                    }
+
+                    if let error = autoBackup.lastError {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+
+                    Button {
+                        showPassphrase.toggle()
+                    } label: {
+                        Label(showPassphrase ? "Hide Recovery Passphrase" : "Show Recovery Passphrase",
+                              systemImage: "key")
+                    }
+                    if showPassphrase {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Save this passphrase — you need it to restore auto-backups:")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(autoBackup.backupPassphrase)
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                                .padding(8)
+                                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                }
+            } header: {
+                Text("Auto Backup")
+            } footer: {
+                if autoBackup.isEnabled && autoBackup.hasExternalLocation {
+                    Text("Backups are automatically saved to your chosen location every time you make a change. They survive app deletion.")
+                } else if autoBackup.isEnabled {
+                    Text("Local backups are saved inside the app. Set an external location (iCloud Drive) for backups that survive app deletion.")
+                }
+            }
+
+            Section {
+                Button {
+                    showingThemePicker = true
+                } label: {
+                    Label("App Theme", systemImage: "paintbrush")
+                }
+            }
         }
         .navigationTitle("Private Vault")
-        .onAppear { viewModel.selectedFolderID = nil }
+        .onAppear {
+            viewModel.selectedFolderID = nil
+            viewModel.showFavoritesOnly = false
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 8) {
@@ -154,6 +269,9 @@ struct FolderListView: View {
         .sheet(isPresented: $showingBackup) {
             backupSheet
         }
+        .sheet(isPresented: $showingThemePicker) {
+            themePickerSheet
+        }
         .fileExporter(
             isPresented: $showFileExporter,
             document: exportedData.map { BackupDocument(data: $0) },
@@ -181,6 +299,52 @@ struct FolderListView: View {
                 restoreBackup()
             case .failure(let error):
                 backupResult = .failure(error.localizedDescription)
+            }
+        }
+        .fileImporter(
+            isPresented: $showExternalFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                if autoBackup.setupExternalLocation(from: url) {
+                    autoBackup.lastError = nil
+                }
+            case .failure:
+                break
+            }
+        }
+    }
+
+    private var themePickerSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(AppTheme.allCases, id: \.self) { theme in
+                    Button {
+                        themeManager.theme = theme
+                    } label: {
+                        HStack {
+                            Image(systemName: theme.icon)
+                                .foregroundStyle(.tint)
+                            Text(theme.label)
+                            Spacer()
+                            if theme == themeManager.theme {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationTitle("App Theme")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showingThemePicker = false }
+                }
             }
         }
     }
@@ -250,7 +414,8 @@ struct FolderListView: View {
         switch backupMode {
         case .export:
             do {
-                let jsonData = try BackupService.createBackup(items: viewModel.items)
+                let activeItems = viewModel.items.filter { !$0.isDeleted }
+                let jsonData = try BackupService.createBackup(items: activeItems)
                 let encryptedData = try BackupService.encryptBackup(jsonData, passphrase: passphrase)
                 exportedData = encryptedData
                 showingBackup = false

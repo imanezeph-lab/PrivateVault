@@ -20,6 +20,10 @@
 		1000000000000000000000000000000000000011 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000013 /* Folder.swift */; };
 		1000000000000000000000000000000000000012 /* FolderListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000014 /* FolderListView.swift */; };
 		1000000000000000000000000000000000000013 /* BackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000015 /* BackupService.swift */; };
+		1000000000000000000000000000000000000014 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000016 /* OnboardingView.swift */; };
+		1000000000000000000000000000000000000015 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000017 /* TrashView.swift */; };
+		1000000000000000000000000000000000000016 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000018 /* ThemeManager.swift */; };
+		1000000000000000000000000000000000000017 /* AutoBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000019 /* AutoBackupManager.swift */; };
 		3000000000000000000000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000012 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +43,10 @@
 		2000000000000000000000000000000000000013 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000014 /* FolderListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderListView.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000015 /* BackupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupService.swift; sourceTree = "<group>"; };
+		2000000000000000000000000000000000000016 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		2000000000000000000000000000000000000017 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
+		2000000000000000000000000000000000000018 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		2000000000000000000000000000000000000019 /* AutoBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBackupManager.swift; sourceTree = "<group>"; };
 		00000000000000000000000000000000000000A0 /* PrivateVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivateVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -102,6 +110,8 @@
 				2000000000000000000000000000000000000009 /* DetailView.swift */,
 				2000000000000000000000000000000000000010 /* ImportView.swift */,
 				2000000000000000000000000000000000000014 /* FolderListView.swift */,
+				2000000000000000000000000000000000000016 /* OnboardingView.swift */,
+				2000000000000000000000000000000000000017 /* TrashView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -111,6 +121,7 @@
 			children = (
 				2000000000000000000000000000000000000005 /* FileStorageService.swift */,
 				2000000000000000000000000000000000000015 /* BackupService.swift */,
+				2000000000000000000000000000000000000019 /* AutoBackupManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -119,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				2000000000000000000000000000000000000006 /* BiometricAuth.swift */,
+				2000000000000000000000000000000000000018 /* ThemeManager.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -213,6 +225,10 @@
 				1000000000000000000000000000000000000011 /* Folder.swift in Sources */,
 				1000000000000000000000000000000000000012 /* FolderListView.swift in Sources */,
 				1000000000000000000000000000000000000013 /* BackupService.swift in Sources */,
+				1000000000000000000000000000000000000014 /* OnboardingView.swift in Sources */,
+				1000000000000000000000000000000000000015 /* TrashView.swift in Sources */,
+				1000000000000000000000000000000000000016 /* ThemeManager.swift in Sources */,
+				1000000000000000000000000000000000000017 /* AutoBackupManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

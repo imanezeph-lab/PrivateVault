@@ -23,6 +23,9 @@ struct MediaItem: Identifiable, Codable, Equatable {
     let dateAdded: Date
     let fileSize: Int64
     var folderID: UUID?
+    var isFavorite: Bool
+    var isDeleted: Bool
+    var deletedDate: Date?
 
     var fileURL: URL {
         FileStorageService.shared.directory.appendingPathComponent(fileName)
@@ -40,7 +43,10 @@ struct MediaItem: Identifiable, Codable, Equatable {
         type: MediaType,
         dateAdded: Date = Date(),
         fileSize: Int64 = 0,
-        folderID: UUID? = nil
+        folderID: UUID? = nil,
+        isFavorite: Bool = false,
+        isDeleted: Bool = false,
+        deletedDate: Date? = nil
     ) {
         self.id = id
         self.fileName = fileName
@@ -48,5 +54,8 @@ struct MediaItem: Identifiable, Codable, Equatable {
         self.dateAdded = dateAdded
         self.fileSize = fileSize
         self.folderID = folderID
+        self.isFavorite = isFavorite
+        self.isDeleted = isDeleted
+        self.deletedDate = deletedDate
     }
 }
