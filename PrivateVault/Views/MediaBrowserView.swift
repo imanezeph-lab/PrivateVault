@@ -108,7 +108,7 @@ struct MediaBrowserView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: showUI ? .always : .never))
-        .indexViewStyle(.page(backgroundDisplayMode: showUI ? .always : .never))
+        .indexViewStyle(.page(backgroundDisplayMode: .always))
     }
 
     private var scrollContent: some View {
