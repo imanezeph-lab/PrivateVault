@@ -25,6 +25,8 @@
 		1000000000000000000000000000000000000016 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000018 /* ThemeManager.swift */; };
 		1000000000000000000000000000000000000017 /* AutoBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000019 /* AutoBackupManager.swift */; };
 		3000000000000000000000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2000000000000000000000000000000000000012 /* Assets.xcassets */; };
+		1000000000000000000000000000000000000018 /* AutoBackupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000000000000000000001A /* AutoBackupSettingsView.swift */; };
+		1000000000000000000000000000000000000019 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000000000000000000001B /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +49,8 @@
 		2000000000000000000000000000000000000017 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000018 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		2000000000000000000000000000000000000019 /* AutoBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBackupManager.swift; sourceTree = "<group>"; };
+		200000000000000000000000000000000000001A /* AutoBackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBackupSettingsView.swift; sourceTree = "<group>"; };
+		200000000000000000000000000000000000001B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		00000000000000000000000000000000000000A0 /* PrivateVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivateVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -112,6 +116,8 @@
 				2000000000000000000000000000000000000014 /* FolderListView.swift */,
 				2000000000000000000000000000000000000016 /* OnboardingView.swift */,
 				2000000000000000000000000000000000000017 /* TrashView.swift */,
+				200000000000000000000000000000000000001A /* AutoBackupSettingsView.swift */,
+				200000000000000000000000000000000000001B /* SettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -229,6 +235,8 @@
 				1000000000000000000000000000000000000015 /* TrashView.swift in Sources */,
 				1000000000000000000000000000000000000016 /* ThemeManager.swift in Sources */,
 				1000000000000000000000000000000000000017 /* AutoBackupManager.swift in Sources */,
+				1000000000000000000000000000000000000018 /* AutoBackupSettingsView.swift in Sources */,
+				1000000000000000000000000000000000000019 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
