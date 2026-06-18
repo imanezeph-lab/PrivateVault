@@ -23,15 +23,12 @@ struct MediaContentView: View {
                 documentViewer
             }
         }
-        .onAppear {
-            if item.type == .video {
-                setupPlayer()
-            }
+        .task(id: item.id) {
+            guard item.type == .video else { return }
+            await setupPlayer()
         }
         .onDisappear {
-            if item.type == .video {
-                teardownPlayer()
-            }
+            teardownPlayer()
         }
         .alert("Unsupported Format", isPresented: $showUnsupportedAlert) {
             Button("OK", role: .cancel) { }
@@ -40,32 +37,17 @@ struct MediaContentView: View {
         }
     }
 
-    private func setupPlayer() {
+    private func setupPlayer() async {
         let asset = AVAsset(url: item.fileURL)
-        let keys = ["playable", "tracks"]
-        asset.loadValuesAsynchronously(forKeys: keys) {
-            var error: NSError?
-            let status = asset.statusOfValue(forKey: "playable", error: &error)
-            DispatchQueue.main.async {
-                switch status {
-                case .loaded:
-                    if asset.isPlayable {
-                        let playerItem = AVPlayerItem(asset: asset)
-                        self.player = AVPlayer(playerItem: playerItem)
-                        self.player?.play()
-                        self.playerStatus = .ready
-                    } else {
-                        self.playerStatus = .failed
-                        self.showUnsupportedAlert = true
-                    }
-                case .failed:
-                    self.playerStatus = .failed
-                    self.showUnsupportedAlert = true
-                default:
-                    self.playerStatus = .failed
-                }
-            }
+        guard let isPlayable = try? await asset.load(.isPlayable), isPlayable else {
+            playerStatus = .failed
+            showUnsupportedAlert = true
+            return
         }
+        let playerItem = AVPlayerItem(asset: asset)
+        self.player = AVPlayer(playerItem: playerItem)
+        self.player?.play()
+        self.playerStatus = .ready
     }
 
     private func teardownPlayer() {
