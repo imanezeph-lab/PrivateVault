@@ -276,7 +276,7 @@ final class VaultViewModel: ObservableObject {
         if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
             var urlsToImport: [URL] = []
             for case let fileURL as URL in enumerator {
-                let isDir = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory
+                let isDir = (try? fileURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory
                 if isDir != true {
                     urlsToImport.append(fileURL)
                 }

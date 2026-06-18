@@ -1,5 +1,7 @@
 import SwiftUI
 import AVKit
+import AVFoundation
+import UIKit
 import QuickLook
 
 struct MediaContentView: View {
