@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import AVFoundation
 
 struct MediaBrowserView: View {
     let items: [MediaItem]

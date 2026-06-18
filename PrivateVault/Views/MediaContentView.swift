@@ -94,7 +94,7 @@ struct MediaContentView: View {
         }) {
             ZStack {
                 Color.black
-                if let player {
+                if let player = player {
                     CustomVideoPlayerView(player: player)
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -115,7 +115,7 @@ struct MediaContentView: View {
         .ignoresSafeArea()
         .background(Color.black)
         .overlay(alignment: .bottom) {
-            if playerStatus == .ready, let player, showUI {
+            if playerStatus == .ready, let player = player, showUI {
                 VideoControlsView(player: player, isPlaying: $isPlaying, isMuted: $isMuted)
                     .padding(.bottom, 20)
             }
@@ -358,13 +358,13 @@ struct CustomSlider: View {
                 
                 Capsule()
                     .fill(Color.white)
-                    .frame(width: max(0, geometry.size.width * percentage), height: 8)
+                    .frame(width: max(0, geometry.size.width * CGFloat(percentage)), height: 8)
             }
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { drag in
                     self.onEditingChanged(true)
-                    let p = min(max(0, drag.location.x / geometry.size.width), 1)
+                    let p = Double(min(max(0, drag.location.x / geometry.size.width), 1))
                     self.value = self.range.lowerBound + p * (self.range.upperBound - self.range.lowerBound)
                 }
                 .onEnded { _ in
