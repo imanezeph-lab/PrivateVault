@@ -5,6 +5,7 @@ struct LockView: View {
     @State private var passcodeInput = ""
     @State private var newPasscode = ""
     @State private var confirmPasscode = ""
+    @State private var showPasscodeError = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -63,10 +64,18 @@ struct LockView: View {
                 .frame(maxWidth: 220)
                 .multilineTextAlignment(.center)
 
+            if showPasscodeError {
+                Text("Incorrect passcode. Try again.")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
             Button("Unlock") {
                 if authService.verifyPasscode(passcodeInput) {
+                    showPasscodeError = false
                     passcodeInput = ""
                 } else {
+                    showPasscodeError = true
                     passcodeInput = ""
                 }
             }

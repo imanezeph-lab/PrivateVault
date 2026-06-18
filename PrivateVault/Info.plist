@@ -2,13 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDisplayName</key>
+    <string>Private Vault</string>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
     </dict>
-    <key>UILaunchScreen</key>
-    <dict/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Private Vault needs access to your photo library to import media.</string>
     <key>NSCameraUsageDescription</key>
     <string>Private Vault uses the camera to take photos and videos directly inside the app.</string>
     <key>NSFaceIDUsageDescription</key>

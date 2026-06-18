@@ -127,10 +127,6 @@ final class VaultViewModel: ObservableObject {
         persistAndBackup()
     }
 
-    func itemsWithoutFolder() -> [MediaItem] {
-        items.filter { $0.folderID == nil && !$0.isDeleted }
-    }
-
     // MARK: - Folders
 
     func createFolder(name: String, icon: String = "folder") {

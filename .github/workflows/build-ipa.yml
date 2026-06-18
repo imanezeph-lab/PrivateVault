@@ -17,7 +17,9 @@ jobs:
         run: xcodebuild -version
 
       - name: Build archive (unsigned)
+        shell: bash
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project PrivateVault.xcodeproj \
             -scheme PrivateVault \
@@ -27,7 +29,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+            PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee build.log
 
       - name: Upload build log
         if: failure()

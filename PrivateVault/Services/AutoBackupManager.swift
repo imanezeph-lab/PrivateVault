@@ -143,6 +143,6 @@ final class AutoBackupManager: ObservableObject {
 
     private func generatePassphrase() -> String {
         let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-        return String((0..<32).map { _ in chars.randomElement()! })
+        return String((0..<32).compactMap { _ in chars.randomElement() })
     }
 }

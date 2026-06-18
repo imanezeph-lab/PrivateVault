@@ -45,16 +45,12 @@ private struct BackupContainer: Codable {
 
 enum BackupError: LocalizedError {
     case encryptFailed
-    case decryptFailed
-    case wrongPassphrase
     case invalidFormat
     case fileNotFound(String)
 
     var errorDescription: String? {
         switch self {
         case .encryptFailed: "Failed to encrypt backup"
-        case .decryptFailed: "Failed to decrypt backup"
-        case .wrongPassphrase: "Wrong passphrase or corrupted file"
         case .invalidFormat: "Invalid backup file format"
         case .fileNotFound(let name): "File not found: \(name)"
         }

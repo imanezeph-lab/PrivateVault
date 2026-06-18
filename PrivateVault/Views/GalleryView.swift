@@ -65,6 +65,7 @@ struct GalleryView: View {
         }
         .sheet(isPresented: $showMoveSheet) {
             moveFolderSheet
+                .onDisappear { itemToMove = nil }
         }
         .alert("Delete Item", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { itemToDelete = nil }
