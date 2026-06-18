@@ -6,6 +6,8 @@ import QuickLook
 
 struct MediaContentView: View {
     let item: MediaItem
+    @Binding var showUI: Bool
+    
     @State private var player: AVPlayer?
     @State private var playerStatus: PlayerStatus = .loading
     @State private var showUnsupportedAlert = false
@@ -64,7 +66,9 @@ struct MediaContentView: View {
     }
 
     private var imageViewer: some View {
-        ZoomableScrollView {
+        ZoomableScrollView(onSingleTap: {
+            withAnimation { showUI.toggle() }
+        }) {
             Color.black
                 .overlay {
                     if let image = UIImage(contentsOfFile: item.fileURL.path) {
@@ -84,29 +88,15 @@ struct MediaContentView: View {
     }
 
     private var videoViewer: some View {
-        ZoomableScrollView {
+        ZoomableScrollView(onSingleTap: {
+            withAnimation { showUI.toggle() }
+        }) {
             ZStack {
                 Color.black
                 if let player {
                     CustomVideoPlayerView(player: player)
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .onTapGesture {
-                            if isPlaying {
-                                player.pause()
-                                isPlaying = false
-                            } else {
-                                player.play()
-                                isPlaying = true
-                            }
-                        }
-                    
-                    if !isPlaying {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.white.opacity(0.8))
-                            .allowsHitTesting(false)
-                    }
                 } else if playerStatus == .loading {
                     ProgressView()
                         .tint(.white)
@@ -123,19 +113,10 @@ struct MediaContentView: View {
         }
         .ignoresSafeArea()
         .background(Color.black)
-        .overlay(alignment: .bottomTrailing) {
-            if playerStatus == .ready {
-                Button {
-                    isMuted.toggle()
-                    player?.isMuted = isMuted
-                } label: {
-                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .font(.body)
-                        .foregroundStyle(.white)
-                        .padding(10)
-                        .background(.black.opacity(0.6), in: Circle())
-                }
-                .padding()
+        .overlay(alignment: .bottom) {
+            if playerStatus == .ready, let player, showUI {
+                VideoControlsView(player: player, isPlaying: $isPlaying, isMuted: $isMuted)
+                    .padding(.bottom, 20)
             }
         }
     }
@@ -172,7 +153,7 @@ struct CustomVideoPlayerView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = VideoPlayerUIView()
         view.playerLayer.player = player
-        view.playerLayer.videoGravity = .resizeAspectFit
+        view.playerLayer.videoGravity = .resizeAspect
         return view
     }
     func updateUIView(_ uiView: UIView, context: Context) {
@@ -187,8 +168,10 @@ class VideoPlayerUIView: UIView {
 
 struct ZoomableScrollView<Content: View>: UIViewRepresentable {
     private var content: Content
+    var onSingleTap: (() -> Void)?
 
-    init(@ViewBuilder content: () -> Content) {
+    init(onSingleTap: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+        self.onSingleTap = onSingleTap
         self.content = content()
     }
 
@@ -213,24 +196,32 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         let doubleTapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
         doubleTapGesture.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTapGesture)
+        
+        let singleTapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleSingleTap(_:)))
+        singleTapGesture.numberOfTapsRequired = 1
+        singleTapGesture.require(toFail: doubleTapGesture)
+        scrollView.addGestureRecognizer(singleTapGesture)
 
         return scrollView
     }
 
     func updateUIView(_ uiView: UIScrollView, context: Context) {
+        context.coordinator.parent = self
         context.coordinator.hostingController.rootView = self.content
         let hostedView = context.coordinator.hostingController.view!
         hostedView.frame = uiView.bounds
     }
 
     func makeCoordinator() -> Coordinator {
-        return Coordinator(hostingController: UIHostingController(rootView: self.content))
+        return Coordinator(parent: self, hostingController: UIHostingController(rootView: self.content))
     }
 
     class Coordinator: NSObject, UIScrollViewDelegate {
+        var parent: ZoomableScrollView
         var hostingController: UIHostingController<Content>
 
-        init(hostingController: UIHostingController<Content>) {
+        init(parent: ZoomableScrollView, hostingController: UIHostingController<Content>) {
+            self.parent = parent
             self.hostingController = hostingController
         }
 
@@ -242,6 +233,10 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
             let offsetX = max(0, (scrollView.bounds.width - scrollView.contentSize.width) / 2)
             let offsetY = max(0, (scrollView.bounds.height - scrollView.contentSize.height) / 2)
             scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: offsetY, right: offsetX)
+        }
+        
+        @objc func handleSingleTap(_ recognizer: UITapGestureRecognizer) {
+            parent.onSingleTap?()
         }
 
         @objc func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
@@ -262,5 +257,120 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
                 scrollView.zoom(to: rectToZoomTo, animated: true)
             }
         }
+    }
+}
+
+struct VideoControlsView: View {
+    let player: AVPlayer
+    @Binding var isPlaying: Bool
+    @Binding var isMuted: Bool
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 0
+    @State private var isDragging = false
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text(formatTime(currentTime))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(formatTime(duration))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 4)
+            
+            HStack(spacing: 16) {
+                Button {
+                    if isPlaying { player.pause() }
+                    else { player.play() }
+                    isPlaying.toggle()
+                } label: {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .frame(width: 24)
+                }
+                
+                CustomSlider(value: Binding(get: {
+                    self.currentTime
+                }, set: { newValue in
+                    self.currentTime = newValue
+                    player.seek(to: CMTime(seconds: newValue, preferredTimescale: 600))
+                }), range: 0...max(duration, 0.01)) { editing in
+                    isDragging = editing
+                    if editing {
+                        player.pause()
+                    } else if isPlaying {
+                        player.play()
+                    }
+                }
+                
+                Button {
+                    isMuted.toggle()
+                    player.isMuted = isMuted
+                } label: {
+                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .frame(width: 24)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background {
+            Rectangle()
+                .fill(.black.opacity(0.4))
+                .ignoresSafeArea()
+        }
+        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
+            guard !isDragging, let currentItem = player.currentItem else { return }
+            let secs = currentItem.currentTime().seconds
+            if !secs.isNaN { currentTime = secs }
+            let dur = currentItem.duration.seconds
+            if !dur.isNaN { duration = dur }
+        }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        if seconds.isNaN || seconds.isInfinite { return "00:00" }
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+}
+
+struct CustomSlider: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    var onEditingChanged: (Bool) -> Void
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let percentage = max(0, min(1, (value - range.lowerBound) / (range.upperBound - range.lowerBound)))
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 8)
+                
+                Capsule()
+                    .fill(Color.white)
+                    .frame(width: max(0, geometry.size.width * percentage), height: 8)
+            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { drag in
+                    onEditingChanged(true)
+                    let p = min(max(0, drag.location.x / geometry.size.width), 1)
+                    value = range.lowerBound + p * (range.upperBound - range.lowerBound)
+                }
+                .onEnded { _ in
+                    onEditingChanged(false)
+                }
+            )
+        }
+        .frame(height: 24)
     }
 }

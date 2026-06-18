@@ -8,6 +8,7 @@ struct MediaBrowserView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
     @State private var currentIndex: Int
     @State private var dragOffset: CGSize = .zero
+    @State private var showUI: Bool = true
 
     init(items: [MediaItem], initialItem: MediaItem?, selectedItem: Binding<MediaItem?>) {
         self.items = items
@@ -74,6 +75,7 @@ struct MediaBrowserView: View {
                 }
             }
         }
+        .toolbar(showUI ? .visible : .hidden, for: .navigationBar, .bottomBar)
         .offset(y: dragOffset.height)
         .simultaneousGesture(
             DragGesture()
@@ -100,20 +102,20 @@ struct MediaBrowserView: View {
     private var swipeContent: some View {
         TabView(selection: $currentIndex) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                MediaContentView(item: item)
+                MediaContentView(item: item, showUI: $showUI)
                     .ignoresSafeArea(edges: item.type == .file ? [] : .all)
                     .tag(index)
             }
         }
-        .tabViewStyle(.page)
-        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .tabViewStyle(.page(indexDisplayMode: showUI ? .always : .never))
+        .indexViewStyle(.page(backgroundDisplayMode: showUI ? .always : .never))
     }
 
     private var scrollContent: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    MediaContentView(item: item)
+                    MediaContentView(item: item, showUI: $showUI)
                         .ignoresSafeArea(edges: item.type == .file ? [] : .all)
                         .containerRelativeFrame(.vertical)
                         .onAppear { currentIndex = index }
