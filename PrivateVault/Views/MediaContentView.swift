@@ -3,6 +3,7 @@ import AVKit
 import AVFoundation
 import UIKit
 import QuickLook
+import Combine
 
 struct MediaContentView: View {
     let item: MediaItem
@@ -67,7 +68,7 @@ struct MediaContentView: View {
 
     private var imageViewer: some View {
         ZoomableScrollView(onSingleTap: {
-            withAnimation { showUI.toggle() }
+            withAnimation { self.showUI.toggle() }
         }) {
             Color.black
                 .overlay {
@@ -89,7 +90,7 @@ struct MediaContentView: View {
 
     private var videoViewer: some View {
         ZoomableScrollView(onSingleTap: {
-            withAnimation { showUI.toggle() }
+            withAnimation { self.showUI.toggle() }
         }) {
             ZStack {
                 Color.black
@@ -297,13 +298,13 @@ struct VideoControlsView: View {
                     self.currentTime
                 }, set: { newValue in
                     self.currentTime = newValue
-                    player.seek(to: CMTime(seconds: newValue, preferredTimescale: 600))
+                    self.player.seek(to: CMTime(seconds: newValue, preferredTimescale: 600))
                 }), range: 0...max(duration, 0.01)) { editing in
-                    isDragging = editing
+                    self.isDragging = editing
                     if editing {
-                        player.pause()
-                    } else if isPlaying {
-                        player.play()
+                        self.player.pause()
+                    } else if self.isPlaying {
+                        self.player.play()
                     }
                 }
                 
@@ -326,11 +327,11 @@ struct VideoControlsView: View {
                 .ignoresSafeArea()
         }
         .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-            guard !isDragging, let currentItem = player.currentItem else { return }
+            guard !self.isDragging, let currentItem = self.player.currentItem else { return }
             let secs = currentItem.currentTime().seconds
-            if !secs.isNaN { currentTime = secs }
+            if !secs.isNaN { self.currentTime = secs }
             let dur = currentItem.duration.seconds
-            if !dur.isNaN { duration = dur }
+            if !dur.isNaN { self.duration = dur }
         }
     }
     
@@ -362,12 +363,12 @@ struct CustomSlider: View {
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { drag in
-                    onEditingChanged(true)
+                    self.onEditingChanged(true)
                     let p = min(max(0, drag.location.x / geometry.size.width), 1)
-                    value = range.lowerBound + p * (range.upperBound - range.lowerBound)
+                    self.value = self.range.lowerBound + p * (self.range.upperBound - self.range.lowerBound)
                 }
                 .onEnded { _ in
-                    onEditingChanged(false)
+                    self.onEditingChanged(false)
                 }
             )
         }

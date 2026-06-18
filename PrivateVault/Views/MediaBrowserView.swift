@@ -75,7 +75,7 @@ struct MediaBrowserView: View {
                 }
             }
         }
-        .toolbar(showUI ? .visible : .hidden, for: .navigationBar, .bottomBar)
+        .toolbar(showUI ? Visibility.visible : Visibility.hidden, for: .navigationBar, .bottomBar)
         .offset(y: dragOffset.height)
         .simultaneousGesture(
             DragGesture()
