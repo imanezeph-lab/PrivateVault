@@ -1,6 +1,16 @@
 import SwiftUI
 import PhotosUI
 
+enum NavigationMode: String, CaseIterable {
+    case swipe = "Swipe"
+    case scroll = "Scroll"
+}
+
+enum SortOrder: String, CaseIterable {
+    case newestFirst = "Newest First"
+    case oldestFirst = "Oldest First"
+}
+
 @MainActor
 final class VaultViewModel: ObservableObject {
     @Published var items: [MediaItem] = []
@@ -9,6 +19,8 @@ final class VaultViewModel: ObservableObject {
     @Published var selectedFolderID: UUID?
     @Published var searchText = ""
     @Published var showFavoritesOnly = false
+    @AppStorage("navigationMode") var navigationMode: NavigationMode = .swipe
+    @AppStorage("navigationOrder") var navigationOrder: SortOrder = .newestFirst
 
     private let storage = FileStorageService.shared
     private let autoBackup = AutoBackupManager.shared
@@ -36,7 +48,11 @@ final class VaultViewModel: ObservableObject {
             }
         }
 
-        return result.sorted { $0.dateAdded > $1.dateAdded }
+        if navigationOrder == .newestFirst {
+            return result.sorted { $0.dateAdded > $1.dateAdded }
+        } else {
+            return result.sorted { $0.dateAdded < $1.dateAdded }
+        }
     }
 
     var trashedItems: [MediaItem] {
@@ -201,7 +217,7 @@ final class VaultViewModel: ObservableObject {
             let mediaType: MediaType
             if ["jpg", "jpeg", "png", "heic", "heif", "webp", "bmp", "tiff"].contains(ext) {
                 mediaType = .image
-            } else if ["mp4", "mov", "m4v", "avi", "mkv"].contains(ext) {
+            } else if ["mp4", "mov", "m4v", "avi", "mkv", "webm"].contains(ext) {
                 mediaType = .video
             } else if ["gif"].contains(ext) {
                 mediaType = .gif
@@ -221,7 +237,7 @@ final class VaultViewModel: ObservableObject {
 
     func handleCameraCapture(url: URL) {
         let ext = url.pathExtension.lowercased()
-        let mediaType: MediaType = ["mp4", "mov", "m4v"].contains(ext) ? .video : .image
+        let mediaType: MediaType = ["mp4", "mov", "m4v", "webm"].contains(ext) ? .video : .image
         var item = FileStorageService.shared.copyFile(from: url, type: mediaType)
         item?.folderID = selectedFolderID
         if let item {

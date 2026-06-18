@@ -31,6 +31,7 @@ struct SettingsView: View {
             List {
                 backupSection
                 autoBackupSection
+                navigationSection
                 themeSection
             }
             .navigationTitle("Settings")
@@ -218,6 +219,25 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var navigationSection: some View {
+        Section("Navigation") {
+            Picker("Mode", selection: $viewModel.navigationMode) {
+                ForEach(NavigationMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+
+            Picker("Order", selection: $viewModel.navigationOrder) {
+                ForEach(SortOrder.allCases, id: \.self) { order in
+                    Text(order.rawValue).tag(order)
+                }
+            }
+        } footer: {
+            Text("Swipe: page-by-page. Scroll: continuous feed.")
         }
     }
 

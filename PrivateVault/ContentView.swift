@@ -8,14 +8,18 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             FolderListView(selectedItem: $selectedItem, showingImport: $showingImport)
-                .fullScreenCover(item: $selectedItem) { item in
-                    DetailView(item: item)
-                        .environmentObject(viewModel)
-                }
                 .sheet(isPresented: $showingImport) {
                     ImportView()
                         .environmentObject(viewModel)
                 }
+        }
+        .fullScreenCover(item: $selectedItem) { item in
+            MediaBrowserView(
+                items: viewModel.filteredItems,
+                initialItem: item,
+                selectedItem: $selectedItem
+            )
+            .environmentObject(viewModel)
         }
     }
 }

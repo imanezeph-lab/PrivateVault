@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 
 struct GalleryView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
@@ -87,6 +88,7 @@ struct GalleryView: View {
                     thumbnail(for: item)
                         .aspectRatio(1, contentMode: .fill)
                         .clipped()
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .contentShape(Rectangle())
                         .overlay(alignment: .topTrailing) {
@@ -235,6 +237,8 @@ struct GalleryView: View {
             } else {
                 fallbackIcon(for: item)
             }
+        } else if item.type == .video {
+            VideoThumbnailView(url: item.fileURL)
         } else {
             ZStack {
                 Color(.systemGray5)
@@ -253,5 +257,34 @@ struct GalleryView: View {
                     .font(.title2)
                     .foregroundStyle(.secondary)
             }
+    }
+}
+
+struct VideoThumbnailView: View {
+    let url: URL
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        ZStack {
+            Color(.systemGray5)
+            if let thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image(systemName: "video")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .task {
+            let asset = AVAsset(url: url)
+            let gen = AVAssetImageGenerator(asset: asset)
+            gen.appliesPreferredTrackTransform = true
+            gen.maximumSize = CGSize(width: 300, height: 300)
+            if let cgImage = try? await gen.image(at: .zero).image {
+                thumbnail = UIImage(cgImage: cgImage)
+            }
+        }
     }
 }
