@@ -1,5 +1,20 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
+
+struct MovieTransferable: Transferable {
+    let url: URL
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            let ext = received.file.pathExtension.isEmpty ? "mov" : received.file.pathExtension
+            let copy = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("\(UUID().uuidString).\(ext)")
+            try FileManager.default.copyItem(at: received.file, to: copy)
+            return Self.init(url: copy)
+        }
+    }
+}
 
 enum NavigationMode: String, CaseIterable {
     case swipe = "Swipe"
@@ -191,18 +206,26 @@ final class VaultViewModel: ObservableObject {
     func handlePickedPhotos(_ items: [PhotosPickerItem]) {
         for item in items {
             Task {
-                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
                 let type = item.supportedContentTypes.first ?? .image
-                let mediaType: MediaType
-                if type == .gif { mediaType = .gif }
-                else if type == .movie { mediaType = .video }
-                else { mediaType = .image }
-
-                let ext = type.preferredFilenameExtension ?? "jpg"
-                var mediaItem = FileStorageService.shared.writeData(data, ext: ext, type: mediaType)
-                mediaItem?.folderID = selectedFolderID
-                if let mediaItem {
-                    addItem(mediaItem)
+                
+                if type.conforms(to: .movie) {
+                    if let movie = try? await item.loadTransferable(type: MovieTransferable.self) {
+                        var mediaItem = FileStorageService.shared.copyFile(from: movie.url, type: .video)
+                        mediaItem?.folderID = selectedFolderID
+                        if let mediaItem {
+                            addItem(mediaItem)
+                        }
+                        try? FileManager.default.removeItem(at: movie.url)
+                    }
+                } else {
+                    guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                    let mediaType: MediaType = type.conforms(to: .gif) ? .gif : .image
+                    let ext = type.preferredFilenameExtension ?? "jpg"
+                    var mediaItem = FileStorageService.shared.writeData(data, ext: ext, type: mediaType)
+                    mediaItem?.folderID = selectedFolderID
+                    if let mediaItem {
+                        addItem(mediaItem)
+                    }
                 }
             }
         }
