@@ -85,8 +85,11 @@ struct GalleryView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(displayItems) { item in
-                    thumbnail(for: item)
-                        .aspectRatio(1, contentMode: .fill)
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            thumbnail(for: item)
+                        }
                         .clipped()
                         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
