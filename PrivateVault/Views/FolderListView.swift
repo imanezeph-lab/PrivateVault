@@ -1,6 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum NavigationDest: Hashable {
+    case allItems, favorites, trash, folder(Folder)
+}
+
 struct FolderListView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
     @Binding var selectedItem: MediaItem?
@@ -12,19 +16,17 @@ struct FolderListView: View {
     @State private var folderToRename: Folder?
     @State private var renameText = ""
     @State private var showingAutoBackupSettings = false
-    @State private var showFavorites = false
-    @State private var showTrash = false
 
     var body: some View {
         List {
-            NavigationLink(value: "all") {
+            NavigationLink(value: NavigationDest.allItems) {
                 Label("All Items", systemImage: "tray.full")
                     .badge(viewModel.activeItemCount())
             }
 
             Section("Folders") {
                 ForEach(viewModel.folders) { folder in
-                    NavigationLink(value: folder.id) {
+                    NavigationLink(value: NavigationDest.folder(folder)) {
                         Label(folder.name, systemImage: folder.icon)
                             .badge(viewModel.folderItemCount(folder))
                     }
@@ -51,50 +53,44 @@ struct FolderListView: View {
             }
 
             Section("Quick Links") {
-                Button {
-                    showFavorites = true
-                } label: {
+                NavigationLink(value: NavigationDest.favorites) {
                     Label("Favorites", systemImage: "star")
                         .badge(viewModel.favoriteCount())
                 }
-                .buttonStyle(.plain)
 
-                Button {
-                    showTrash = true
-                } label: {
+                NavigationLink(value: NavigationDest.trash) {
                     Label("Recently Deleted", systemImage: "trash")
                         .badge(viewModel.trashedItems.count)
                 }
-                .buttonStyle(.plain)
             }
         }
-        .navigationDestination(for: String.self) { value in
-            GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
-                .environmentObject(viewModel)
-                .onAppear {
-                    viewModel.selectedFolderID = nil
-                    viewModel.showFavoritesOnly = false
-                }
-        }
-        .navigationDestination(for: UUID.self) { folderID in
-            GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
-                .environmentObject(viewModel)
-                .onAppear {
-                    viewModel.selectedFolderID = folderID
-                    viewModel.showFavoritesOnly = false
-                }
-        }
-        .navigationDestination(isPresented: $showFavorites) {
-            GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
-                .environmentObject(viewModel)
-                .onAppear {
-                    viewModel.selectedFolderID = nil
-                    viewModel.showFavoritesOnly = true
-                }
-        }
-        .navigationDestination(isPresented: $showTrash) {
-            TrashView()
-                .environmentObject(viewModel)
+        .navigationDestination(for: NavigationDest.self) { dest in
+            switch dest {
+            case .allItems:
+                GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        viewModel.selectedFolderID = nil
+                        viewModel.showFavoritesOnly = false
+                    }
+            case .favorites:
+                GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        viewModel.selectedFolderID = nil
+                        viewModel.showFavoritesOnly = true
+                    }
+            case .trash:
+                TrashView()
+                    .environmentObject(viewModel)
+            case .folder(let folder):
+                GalleryView(selectedItem: $selectedItem, showingImport: $showingImport)
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        viewModel.selectedFolderID = folder.id
+                        viewModel.showFavoritesOnly = false
+                    }
+            }
         }
         .navigationTitle("Private Vault")
         .toolbar {

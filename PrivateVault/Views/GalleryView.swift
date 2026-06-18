@@ -9,7 +9,7 @@ struct GalleryView: View {
     @State private var showDeleteConfirmation = false
     @State private var itemToDelete: MediaItem?
 
-    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 2)]
+    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 4)]
 
     private var displayItems: [MediaItem] {
         viewModel.filteredItems
@@ -82,11 +82,12 @@ struct GalleryView: View {
 
     private var gridContent: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 2) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(displayItems) { item in
                     thumbnail(for: item)
                         .aspectRatio(1, contentMode: .fill)
                         .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                         .contentShape(Rectangle())
                         .overlay(alignment: .topTrailing) {
                             if item.isFavorite {
@@ -100,6 +101,7 @@ struct GalleryView: View {
                         .contextMenu { itemContextMenu(for: item) }
                 }
             }
+            .padding(4)
         }
     }
 

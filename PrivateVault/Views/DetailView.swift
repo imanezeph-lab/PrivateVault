@@ -8,6 +8,7 @@ struct DetailView: View {
     @EnvironmentObject private var viewModel: VaultViewModel
     @State private var showMoveSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var player: AVPlayer?
 
     var body: some View {
         NavigationStack {
@@ -55,6 +56,16 @@ struct DetailView: View {
                     Button("Close") { dismiss() }
                 }
             }
+            .onAppear {
+                if item.type == .video {
+                    player = AVPlayer(url: item.fileURL)
+                    player?.play()
+                }
+            }
+            .onDisappear {
+                player?.pause()
+                player = nil
+            }
             .sheet(isPresented: $showMoveSheet) {
                 moveFolderSheet
             }
@@ -100,18 +111,30 @@ struct DetailView: View {
     }
 
     private var mediaViewer: some View {
-        GeometryReader { geo in
-            ScrollView([.horizontal, .vertical], showsIndicators: false) {
-                Image(uiImage: UIImage(contentsOfFile: item.fileURL.path) ?? UIImage())
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(minWidth: geo.size.width, minHeight: geo.size.height)
+        Color.black
+            .overlay {
+                if let image = UIImage(contentsOfFile: item.fileURL.path) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                }
             }
-        }
     }
 
     private var videoViewer: some View {
-        VideoPlayer(player: AVPlayer(url: item.fileURL))
+        ZStack {
+            Color.black
+            if let player {
+                VideoPlayer(player: player)
+                    .aspectRatio(16 / 9, contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
     }
 
     private var documentViewer: some View {
