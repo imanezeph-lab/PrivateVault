@@ -7,6 +7,7 @@ struct MediaBrowserView: View {
     @Binding var selectedItem: MediaItem?
     @EnvironmentObject private var viewModel: VaultViewModel
     @State private var currentIndex: Int
+    @State private var dragOffset: CGSize = .zero
 
     init(items: [MediaItem], initialItem: MediaItem?, selectedItem: Binding<MediaItem?>) {
         self.items = items
@@ -73,6 +74,24 @@ struct MediaBrowserView: View {
                 }
             }
         }
+        .offset(y: dragOffset.height)
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { value in
+                    if value.translation.height > 0 && abs(value.translation.height) > abs(value.translation.width) {
+                        dragOffset = CGSize(width: 0, height: value.translation.height)
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.height > 150 && abs(value.translation.height) > abs(value.translation.width) {
+                        selectedItem = nil
+                    } else {
+                        withAnimation(.spring()) {
+                            dragOffset = .zero
+                        }
+                    }
+                }
+        )
         .onAppear {
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         }

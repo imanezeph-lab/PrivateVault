@@ -233,8 +233,8 @@ final class VaultViewModel: ObservableObject {
 
     func handleDocumentPicker(urls: [URL]) {
         for url in urls {
-            guard url.startAccessingSecurityScopedResource() else { continue }
-            defer { url.stopAccessingSecurityScopedResource() }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
 
             let ext = url.pathExtension.lowercased()
             let mediaType: MediaType
@@ -265,6 +265,23 @@ final class VaultViewModel: ObservableObject {
         item?.folderID = selectedFolderID
         if let item {
             addItem(item)
+        }
+    }
+
+    func handleFolderImport(url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        
+        let fileManager = FileManager.default
+        if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+            var urlsToImport: [URL] = []
+            for case let fileURL as URL in enumerator {
+                let isDir = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory
+                if isDir != true {
+                    urlsToImport.append(fileURL)
+                }
+            }
+            handleDocumentPicker(urls: urlsToImport)
         }
     }
 }

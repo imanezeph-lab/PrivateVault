@@ -7,6 +7,8 @@ struct MediaContentView: View {
     @State private var player: AVPlayer?
     @State private var playerStatus: PlayerStatus = .loading
     @State private var showUnsupportedAlert = false
+    @State private var isMuted = false
+    @State private var isPlaying = true
 
     enum PlayerStatus {
         case loading, ready, failed
@@ -46,13 +48,16 @@ struct MediaContentView: View {
         }
         let playerItem = AVPlayerItem(asset: asset)
         self.player = AVPlayer(playerItem: playerItem)
+        self.player?.isMuted = isMuted
         self.player?.play()
+        self.isPlaying = true
         self.playerStatus = .ready
     }
 
     private func teardownPlayer() {
         player?.pause()
         player = nil
+        isPlaying = false
         playerStatus = .loading
     }
 
@@ -81,9 +86,25 @@ struct MediaContentView: View {
             ZStack {
                 Color.black
                 if let player {
-                    VideoPlayer(player: player)
+                    CustomVideoPlayerView(player: player)
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onTapGesture {
+                            if isPlaying {
+                                player.pause()
+                                isPlaying = false
+                            } else {
+                                player.play()
+                                isPlaying = true
+                            }
+                        }
+                    
+                    if !isPlaying {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .allowsHitTesting(false)
+                    }
                 } else if playerStatus == .loading {
                     ProgressView()
                         .tint(.white)
@@ -100,6 +121,21 @@ struct MediaContentView: View {
         }
         .ignoresSafeArea()
         .background(Color.black)
+        .overlay(alignment: .bottomTrailing) {
+            if playerStatus == .ready {
+                Button {
+                    isMuted.toggle()
+                    player?.isMuted = isMuted
+                } label: {
+                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.body)
+                        .foregroundStyle(.white)
+                        .padding(10)
+                        .background(.black.opacity(0.6), in: Circle())
+                }
+                .padding()
+            }
+        }
     }
 
     private var documentViewer: some View {
@@ -127,6 +163,24 @@ private struct QuickLookPreview: UIViewControllerRepresentable {
         func numberOfPreviewItems(in _: QLPreviewController) -> Int { 1 }
         func previewController(_: QLPreviewController, previewItemAt _: Int) -> QLPreviewItem { url as QLPreviewItem }
     }
+}
+
+struct CustomVideoPlayerView: UIViewRepresentable {
+    let player: AVPlayer
+    func makeUIView(context: Context) -> UIView {
+        let view = VideoPlayerUIView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspectFit
+        return view
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        (uiView as? VideoPlayerUIView)?.playerLayer.player = player
+    }
+}
+
+class VideoPlayerUIView: UIView {
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    override class var layerClass: AnyClass { AVPlayerLayer.self }
 }
 
 struct ZoomableScrollView<Content: View>: UIViewRepresentable {
@@ -183,14 +237,9 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
-            let hostingView = hostingController.view!
-            let scrollViewSize = scrollView.bounds.size
-            let viewSize = hostingView.frame.size
-            
-            let insetX = max(0, (scrollViewSize.width - viewSize.width) / 2)
-            let insetY = max(0, (scrollViewSize.height - viewSize.height) / 2)
-            
-            scrollView.contentInset = UIEdgeInsets(top: insetY, left: insetX, bottom: insetY, right: insetX)
+            let offsetX = max(0, (scrollView.bounds.width - scrollView.contentSize.width) / 2)
+            let offsetY = max(0, (scrollView.bounds.height - scrollView.contentSize.height) / 2)
+            scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: offsetY, right: offsetX)
         }
 
         @objc func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {

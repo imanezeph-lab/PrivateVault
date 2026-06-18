@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State private var isProcessing = false
     @State private var showPassphrase = false
     @State private var showExternalFolderPicker = false
+    @State private var showFolderExporter = false
+    @State private var showFolderImporter = false
 
     enum BackupMode { case export, `import` }
     enum BackupResult {
@@ -88,6 +90,31 @@ struct SettingsView: View {
                     break
                 }
             }
+            .fileExporter(
+                isPresented: $showFolderExporter,
+                document: RawMediaExportDocument(items: viewModel.items.filter { !$0.isDeleted }),
+                contentType: .folder,
+                defaultFilename: "PrivateVault Export"
+            ) { result in
+                switch result {
+                case .success: backupResult = .success("Exported successfully!")
+                case .failure(let error): backupResult = .failure(error.localizedDescription)
+                }
+            }
+            .fileImporter(
+                isPresented: $showFolderImporter,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    viewModel.handleFolderImport(url: url)
+                    backupResult = .success("Imported media from folder!")
+                case .failure(let error):
+                    backupResult = .failure(error.localizedDescription)
+                }
+            }
         }
     }
 
@@ -101,7 +128,7 @@ struct SettingsView: View {
                 backupResult = nil
                 showPassphraseSheet = true
             } label: {
-                Label("Backup All Data", systemImage: "square.and.arrow.up")
+                Label("Backup All Data (.vault)", systemImage: "lock.shield")
             }
 
             Button {
@@ -111,12 +138,24 @@ struct SettingsView: View {
                 backupResult = nil
                 showPassphraseSheet = true
             } label: {
-                Label("Restore from Backup", systemImage: "square.and.arrow.down")
+                Label("Restore from Backup (.vault)", systemImage: "arrow.counterclockwise.icloud")
+            }
+            
+            Button {
+                showFolderExporter = true
+            } label: {
+                Label("Export Media to Folder", systemImage: "square.and.arrow.up")
+            }
+
+            Button {
+                showFolderImporter = true
+            } label: {
+                Label("Import Media from Folder", systemImage: "folder.badge.plus")
             }
         } header: {
-            Text("Backup")
+            Text("Data Management")
         } footer: {
-            Text("Backups are AES-256 encrypted. Save the .vault file anywhere \u{2014} you\u{2019}ll need your passphrase to restore.")
+            Text("Encrypted backups (.vault) require your passphrase. Exporting to a folder saves raw files unencrypted.")
         }
     }
 
@@ -344,5 +383,24 @@ struct SettingsView: View {
         let f = DateFormatter()
         f.dateFormat = "yyyyMMdd-HHmmss"
         return f.string(from: Date())
+    }
+}
+
+struct RawMediaExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.folder] }
+    var fileWrappers: [String: FileWrapper] = [:]
+    
+    init(items: [MediaItem]) {
+        for item in items {
+            if let data = try? Data(contentsOf: item.fileURL) {
+                let wrapper = FileWrapper(regularFileWithContents: data)
+                fileWrappers[item.fileName] = wrapper
+            }
+        }
+    }
+    
+    init(configuration: ReadConfiguration) throws { }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        return FileWrapper(directoryWithFileWrappers: fileWrappers)
     }
 }
